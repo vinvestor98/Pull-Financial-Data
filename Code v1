@@ -1,0 +1,95 @@
+#This is a simple chatbot that allow user to check the last 4 years financial metrics of public companies.
+
+#yfinance is a package that allow us to download market data from Yahoo Finance.
+import yfinance as yf
+
+# Define lists of metrics available for IS, BS and CF on yfinance / Yahoo Finance
+INCOME_STATEMENT_METRICS = [
+    'Total Revenue', 'Cost Of Revenue', 'Gross Profit','Operating Expense'
+    'Research Development', 'Selling General and Administrative',
+    'Operating Income','EBITDA','Pretax Income',
+    'Income Before Tax', 'Net Income', 'Basic EPS','Diluted EPS'
+]
+
+BALANCE_SHEET_METRICS = [
+    'Cash, Cash Equivalents & Short Term Investments','Cash And Cash Equivalents','Other Short Term Investments','Inventory','Net PPE',
+    'Total Assets', 'Curretn Liabilites','Total Current Liabilities', 'Total Liabilities Net Minority Interest',
+    'Total Stockholder Equity','Total Debt','Net Debt'
+]
+
+CASH_FLOW_STATEMENT_METRICS = [
+    'Operating Cash Flow',
+    'Investing Cash Flow',
+    'Financing Cash Flow',
+    'Free Cash Flow'
+]
+#Three functions are needed for this program - fetch_financial_data, get_ordered_metrics and chatbot.
+
+def fetch_financial_data(ticker_symbol, metric):
+    # Fetch and displays a specific financial metric's historical data for the given ticker or company.
+    ticker = yf.Ticker(ticker_symbol)
+    income_statement = ticker.financials
+    balance_sheet = ticker.balance_sheet
+    cashflow = ticker.cashflow
+
+    # Combine all data frames into a single dictionary, and filter by a given metric
+    combined_data = {
+        **{k: income_statement.loc[k] for k in income_statement.index if k == metric},
+        **{k: balance_sheet.loc[k] for k in balance_sheet.index if k == metric},
+        **{k: cashflow.loc[k] for k in cashflow.index if k == metric}
+    }
+
+    # Check if the requested metric is present and print it if available
+    if metric in combined_data:
+        data = combined_data[metric]
+        print(f"\n{metric} for {ticker_symbol} over the last 4 years:")
+        print(data)
+        print("Note: Only 4 years of data is available for free on yfinance.")
+    else:
+        print(f"\n{metric} data is not available for {ticker_symbol}.")
+
+def get_ordered_metrics(ticker_symbol):
+    # Retrieves and organizes all available financial metrics for given ticker / company
+    ticker = yf.Ticker(ticker_symbol)
+    income_statement = ticker.financials.index
+    balance_sheet = ticker.balance_sheet.index
+    cashflow = ticker.cashflow.index
+
+    # Combine available metrics into one set
+    available_metrics = set(income_statement).union(set(balance_sheet)).union(set(cashflow))
+
+    # Sort accordingly
+    ordered_metrics = {
+        "Income Statement": [m for m in INCOME_STATEMENT_METRICS if m in available_metrics],
+        "Balance Sheet": [m for m in BALANCE_SHEET_METRICS if m in available_metrics],
+        "Cash Flow Statement": [m for m in CASH_FLOW_STATEMENT_METRICS if m in available_metrics]
+    }
+
+    return ordered_metrics
+
+def chatbot():
+    # Interactive chatbot
+    print("Welcome to the Financial Metrics Chatbot!")
+    while True:
+        ticker_symbol = input("\nEnter the ticker symbol (e.g., AAPL), or type 'exit' to quit: ")
+        if ticker_symbol.lower() == 'exit':
+            print("Exiting chatbot.")
+            break
+
+        # Retrieve and display available metrics across all financial statements
+        ordered_metrics = get_ordered_metrics(ticker_symbol)
+        if any(ordered_metrics.values()):
+            print(f"\nAvailable financial metrics for {ticker_symbol}:")
+            for statement, metrics in ordered_metrics.items():
+                print(f"\n{statement}:")
+                for metric in metrics:
+                    print(f"- {metric}")
+        else:
+            print(f"No financial data is available for {ticker_symbol}.")
+
+        # Prompt the user to input a specific metric from the list to retrieve the data
+        metric = input("\nEnter the financial metric you are looking for from the list: ")
+        fetch_financial_data(ticker_symbol, metric)
+
+if __name__ == "__main__":
+    chatbot()
